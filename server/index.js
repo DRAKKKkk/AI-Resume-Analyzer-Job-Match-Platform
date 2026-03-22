@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import pool from './db.js';
 
@@ -24,9 +23,16 @@ app.post('/api/analyze', upload.single('resume'), async (req, res) => {
         
         if (!req.file) return res.status(400).json({ error: "Please upload a resume" });
 
-        // 1. Parse the PDF
-        const pdfData = await pdfParse(req.file.buffer);
-        const resumeText = pdfData.text;
+        // ADD THIS LINE TO DEBUG:
+        console.log("File received from frontend:", req.file);
+
+        // Convert the PDF buffer to a format Gemini can read directly
+        const pdfPart = {
+            inlineData: {
+                data: req.file.buffer.toString("base64"),
+                mimeType: "application/pdf"
+            }
+        };
 
         // 2. Send to Gemini
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -36,7 +42,6 @@ app.post('/api/analyze', upload.single('resume'), async (req, res) => {
             "score": an integer from 0 to 100 representing the match percentage.
             "feedback": a short string explaining missing skills and overall fit.
             
-            Resume: ${resumeText}
             Job Description: ${jobDescription}
         `;
 
@@ -53,7 +58,7 @@ app.post('/api/analyze', upload.single('resume'), async (req, res) => {
         res.json(aiAnalysis);
 
     } catch (error) {
-        console.error(error);
+        console.error("Full Error : ",error);
         res.status(500).json({ error: "Analysis failed", details: error.message });
     }
 });
