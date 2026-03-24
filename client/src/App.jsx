@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 
+
+const socket = io('http://localhost:5000');
 
 function App() {
   const [file, setFile] = useState(null);
@@ -8,6 +10,22 @@ function App() {
   const [jobDescription, setJobDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [socketRoom, setSocketRoom] = useState('');
+
+  useEffect(() => {
+    const room = Math.random().toString(36).substring(7);
+    setSocketRoom(room);
+    socket.emit('join', room);
+
+    socket.on('analysisComplete', (data) => {
+      setResult(data);
+      setLoading(false);
+    });
+
+    return () => {
+      socket.off('analysisComplete');
+    };
+  }, []);
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
@@ -20,6 +38,7 @@ function App() {
     formData.append('resume', file);
     formData.append('jobTitle', jobTitle);
     formData.append('jobDescription', jobDescription);
+    formData.append('socketRoom', socketRoom);
 
     try {
       // Using native fetch instead of Axios for bulletproof file uploads
@@ -29,18 +48,16 @@ function App() {
         // Notice we do NOT set the Content-Type header. The browser does it automatically with the correct boundaries!
       });
 
-      const data = await response.json();
+      // const data = await response.json();
 
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error || data.details || 'Analysis failed');
       }
 
-      setResult(data);
+      // setResult(data);
       
     } catch (error) {
-      console.error("Upload Error:", error);
-      alert("Something went wrong. Check your browser's console.");
-    } finally {
       setLoading(false);
     }
   };
