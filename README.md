@@ -1,7 +1,7 @@
 # AI-Resume-Analyzer-Job-Match-Platform
 
-Job Title: Software Engineer (Backend / Distributed Systems) - Fresher
-
+Job Title: 
+Software Engineer (Backend / Distributed Systems) - Fresher
 About Us: 
 We are a fast-paced tech company building real-time, data-intensive applications for millions of users. We are looking for a highly motivated entry-level Software Engineer to join our core backend team. You will help us build scalable APIs, manage asynchronous background tasks, and optimize our database performance.
 
