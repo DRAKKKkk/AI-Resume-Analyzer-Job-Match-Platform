@@ -80,25 +80,28 @@ function App() {
 
   const renderFeedback = (feedbackData) => {
     let parsed = feedbackData;
-    // Safely parse it if it comes from the database as a string
-    if (typeof feedbackData === 'string') {
-      try { parsed = JSON.parse(feedbackData); } 
-      catch (e) { return <p style={{ fontSize: '14px', color: '#555' }}>{feedbackData}</p>; }
+
+    while (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch (e) {
+        break;
+      }
     }
-    
+
     if (Array.isArray(parsed)) {
       return parsed.map((sec, i) => (
         <div key={i} style={{ marginBottom: '12px' }}>
           <strong style={{ display: 'block', color: '#2c3e50', fontSize: '14px', textTransform: 'uppercase' }}>{sec.section}</strong>
           <ul style={{ margin: '4px 0 0 20px', padding: 0, color: '#555', fontSize: '14px' }}>
-            {sec.points.map((pt, j) => <li key={j} style={{ marginBottom: '4px', lineHeight: '1.4' }}>{pt}</li>)}
+            {sec.points.map((pt, j) => <li key={j} style={{ marginBottom: '4px', lineHeight: '1.4', listStyleType: 'disc' }}>{pt}</li>)}
           </ul>
         </div>
       ));
     }
-    return <p style={{ fontSize: '14px', color: '#555' }}>{feedbackData}</p>;
-  };
 
+    return <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6' }}>{String(feedbackData)}</p>;
+  };
   
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
@@ -198,7 +201,9 @@ function App() {
                           {item.match_score}%
                         </span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '14px', color: '#555', lineHeight: '1.5' }}>{item.feedback}</p>
+                     <div style={{ marginTop: '8px' }}>
+                        {renderFeedback(item.feedback)}
+                      </div>
                     </div>
                   ))}
                 </div>
