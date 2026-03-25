@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import http from 'http';
 import IORedis from 'ioredis';
 import fs from 'fs';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -39,9 +40,12 @@ const upload = multer({
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const redisOpts = { 
-    maxRetriesPerRequest: null,
-    tls: { rejectUnauthorized: false } 
+    maxRetriesPerRequest: null
 };
+
+if (process.env.REDIS_URL && process.env.REDIS_URL.startsWith('rediss')) {
+    redisOpts.tls = { rejectUnauthorized: false };
+}
 
 const resumeQueue = new Queue('resume-analysis', { 
     connection: new IORedis(process.env.REDIS_URL, redisOpts) 
@@ -88,12 +92,11 @@ const worker = new Worker('resume-analysis', async job => {
 
         await pool.query(
             "INSERT INTO analyses (job_title, company_name, match_score, feedback) VALUES ($1, $2, $3, $4)",
-            // Notice we added JSON.stringify here!
             [jobTitle || "Untitled Job", companyName || "Unknown", aiAnalysis.score, JSON.stringify(aiAnalysis.feedback)] 
         );
 
         io.to(socketRoom).emit('analysisComplete', aiAnalysis);
-        
+
     } catch (error) {
         console.error(error);
     } finally {
@@ -103,7 +106,15 @@ const worker = new Worker('resume-analysis', async job => {
     }
 }, { connection: new IORedis(process.env.REDIS_URL, redisOpts) });
 
-app.post('/api/analyze', upload.single('resume'), async (req, res) => {
+const analyzeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    max: 5, 
+    message: { error: "Too many analyses requested. Please try again in 15 minutes to conserve AI quotas." },
+    standardHeaders: true, 
+    legacyHeaders: false,
+});
+
+app.post('/api/analyze', analyzeLimiter, upload.single('resume'), async (req, res) => {
     try {
         const { jobDescription, jobTitle, companyName, socketRoom } = req.body;
 
@@ -133,5 +144,16 @@ app.get('/api/history', async (req, res) => {
     }
 });
 
+pool.query(`
+  CREATE TABLE IF NOT EXISTS analyses (
+    id SERIAL PRIMARY KEY,
+    job_title VARCHAR(255),
+    company_name VARCHAR(255),
+    match_score INTEGER,
+    feedback TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {});
+server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
