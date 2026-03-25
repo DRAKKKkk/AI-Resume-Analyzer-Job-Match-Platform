@@ -78,6 +78,28 @@ function App() {
     return acc;
   }, {});
 
+  const renderFeedback = (feedbackData) => {
+    let parsed = feedbackData;
+    // Safely parse it if it comes from the database as a string
+    if (typeof feedbackData === 'string') {
+      try { parsed = JSON.parse(feedbackData); } 
+      catch (e) { return <p style={{ fontSize: '14px', color: '#555' }}>{feedbackData}</p>; }
+    }
+    
+    if (Array.isArray(parsed)) {
+      return parsed.map((sec, i) => (
+        <div key={i} style={{ marginBottom: '12px' }}>
+          <strong style={{ display: 'block', color: '#2c3e50', fontSize: '14px', textTransform: 'uppercase' }}>{sec.section}</strong>
+          <ul style={{ margin: '4px 0 0 20px', padding: 0, color: '#555', fontSize: '14px' }}>
+            {sec.points.map((pt, j) => <li key={j} style={{ marginBottom: '4px', lineHeight: '1.4' }}>{pt}</li>)}
+          </ul>
+        </div>
+      ));
+    }
+    return <p style={{ fontSize: '14px', color: '#555' }}>{feedbackData}</p>;
+  };
+
+  
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
       <h1 style={{ textAlign: 'center', color: '#2c3e50' }}>AI Resume Matcher</h1>
@@ -145,9 +167,9 @@ function App() {
       {result && (
         <div style={{ marginTop: '30px', padding: '25px', backgroundColor: '#e8f6f3', borderRadius: '10px', borderLeft: '5px solid #1abc9c' }}>
           <h2 style={{ margin: '0 0 10px 0', color: '#16a085' }}>Match Score: {result.score}%</h2>
-          <p style={{ margin: '0', fontSize: '16px', lineHeight: '1.5', color: '#2c3e50' }}>
-            {result.feedback}
-          </p>
+         <div style={{ marginTop: '10px' }}>
+            {renderFeedback(result.feedback)}
+          </div>
         </div>
       )}
 

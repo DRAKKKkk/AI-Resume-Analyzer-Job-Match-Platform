@@ -63,12 +63,21 @@ const worker = new Worker('resume-analysis', async job => {
             }
         };
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const prompt = `
             Act as an expert technical recruiter. Analyze the attached PDF resume against the job description below.
-            Return ONLY a valid JSON object with no markdown formatting. The JSON must have two keys:
-            "score": an integer from 0 to 100 representing the match percentage.
-            "feedback": a short string explaining missing skills and overall fit.
+            Return ONLY a valid JSON object. No markdown.
+            Format strictly like this:
+            {
+                "score": 80,
+                "feedback": [
+                    { "section": "OVERALL FIT", "points": ["Under 15 words bullet.", "Another short bullet."] },
+                    { "section": "SKILLS", "points": ["Under 15 words bullet.", "Another short bullet."] },
+                    { "section": "PROJECTS", "points": ["Under 15 words bullet."] },
+                    { "section": "EDUCATION", "points": ["Under 15 words bullet."] }
+                ]
+            }
+            Keep every point strictly under 15 words. Brutally brief.
 
             Job Description: ${jobDescription}
         `;
@@ -79,11 +88,12 @@ const worker = new Worker('resume-analysis', async job => {
 
         await pool.query(
             "INSERT INTO analyses (job_title, company_name, match_score, feedback) VALUES ($1, $2, $3, $4)",
-            [jobTitle || "Untitled Job", companyName || "Unknown", aiAnalysis.score, aiAnalysis.feedback]
+            // Notice we added JSON.stringify here!
+            [jobTitle || "Untitled Job", companyName || "Unknown", aiAnalysis.score, JSON.stringify(aiAnalysis.feedback)] 
         );
 
         io.to(socketRoom).emit('analysisComplete', aiAnalysis);
-
+        
     } catch (error) {
         console.error(error);
     } finally {
