@@ -1,42 +1,34 @@
-# AI-Resume-Analyzer-Job-Match-Platform
+# AI Resume Matcher
 
-Job Title: 
-Software Engineer (Backend / Distributed Systems) - Fresher
-About Us: 
-We are a fast-paced tech company building real-time, data-intensive applications for millions of users. We are looking for a highly motivated entry-level Software Engineer to join our core backend team. You will help us build scalable APIs, manage asynchronous background tasks, and optimize our database performance.
+A full-stack web application that uses Google Gemini AI to analyze resumes against job descriptions, providing an ATS-style match score and structured feedback.
 
-What You Will Do:
+## Features
 
-Design and develop high-throughput RESTful APIs using Node.js and Express.
+* PDF resume parsing and AI analysis
+* Real-time UI updates via WebSockets
+* Background job processing with BullMQ and Redis
+* Rate limiting for API protection
+* PostgreSQL database for history tracking
 
-Architect and implement real-time communication features using WebSockets (Socket.io).
+## Tech Stack
 
-Manage asynchronous background jobs and task queues using Redis to ensure smooth user experiences.
+* **Frontend:** React, Vite
+* **Backend:** Node.js, Express, Socket.io
+* **Database:** PostgreSQL
+* **Queue:** Redis, BullMQ
+* **AI:** Google Generative AI (Gemini 2.5 Flash)
+* **Infrastructure:** Docker, Docker Compose
 
-Write complex, optimized queries and manage relational data using PostgreSQL.
+## Setup and Installation
 
-Collaborate with the frontend team to integrate APIs seamlessly with React interfaces.
+1. Clone the repository
+2. Create a `.env` file in the `server` directory:
 
-Participate in architectural discussions and learn the fundamentals of system design for scalable applications.
+GEMINI_API_KEY=your_api_key_here
+PORT=5000
 
-Who You Are:
+3. Run the application using Docker:
 
-2025/2026 Graduate with a B.Tech/BE in Computer Science, IT, or a related field.
+docker compose up --build
 
-Strong foundation in Data Structures, Algorithms, and Object-Oriented Programming (experience in C++ or Java is highly valued).
-
-Hands-on experience building full-stack or backend projects using Node.js, Express, and PostgreSQL.
-
-Familiarity with caching and message queues (Redis, BullMQ, RabbitMQ) is a massive advantage.
-
-Active participant in competitive programming (Codeforces, LeetCode) with a proven track record of solving complex algorithmic problems.
-
-Excellent problem-solving skills and the ability to debug complex systems.
-
-Bonus Points:
-
-Experience integrating Large Language Models (LLMs) or AI APIs (OpenAI, Gemini) into production apps.
-
-Familiarity with containerization (Docker) or deploying applications on Linux environments (Arch, Ubuntu).
-
-A strong GitHub portfolio showcasing organic commits and clean code architecture.
+4. Access the frontend at `http://localhost:5173`

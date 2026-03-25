@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:5000');
+const BACKEND_URL='https://resume-ai-backend-lki4.onrender.com';
+
+const socket = io(BACKEND_URL);
 
 function App() {
   const [file, setFile] = useState(null);
@@ -15,7 +17,7 @@ function App() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/history');
+      const res = await fetch(`${BACKEND_URL}/api/history`);
       if (res.ok) {
         const data = await res.json();
         setHistory(data);
@@ -58,7 +60,7 @@ function App() {
     formData.append('resume', file);
 
     try {
-      const response = await fetch('http://localhost:5000/api/analyze', {
+      const response = await fetch(`${BACKEND_URL}/api/analyze`, {
         method: 'POST',
         body: formData,
       });
