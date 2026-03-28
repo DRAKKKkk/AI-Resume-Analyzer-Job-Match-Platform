@@ -1,15 +1,13 @@
 import fs from 'fs';
-import pdf from 'pdf-parse';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { ChatOpenAI } from '@langchain/openai';
-import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { DynamicStructuredTool } from '@langchain/core/tools';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { SystemMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 
 const server = new Server(
   { name: 'resume-mcp-server', version: '1.0.0' },
@@ -20,7 +18,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: 'parse_resume',
-      description: 'Parses raw resume text into structured JSON containing skills, education, and work experience.',
+      description: 'Parses raw resume text into structured JSON.',
       inputSchema: {
         type: 'object',
         properties: { text: { type: 'string' } },
@@ -41,7 +39,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === 'parse_resume') {
-    const text = String(request.params.arguments.text);
     return {
       content: [{
         type: 'text',
@@ -75,9 +72,7 @@ async function runMcpServer() {
 }
 
 async function runAgenticWorkflow(pdfPath, targetJobDescription) {
-  const dataBuffer = fs.readFileSync(pdfPath);
-  const pdfData = await pdf(dataBuffer);
-  const rawResumeText = pdfData.text;
+  const pdfBase64 = fs.readFileSync(pdfPath).toString('base64');
 
   const mcpClient = new Client({ name: 'langchain-mcp-client', version: '1.0.0' }, { capabilities: {} });
   
@@ -114,23 +109,48 @@ async function runAgenticWorkflow(pdfPath, targetJobDescription) {
     }
   });
 
-  const llm = new ChatOpenAI({ modelName: 'gpt-4o', temperature: 0 });
+  const llm = new ChatGoogleGenerativeAI({ modelName: 'gemini-2.5-flash', temperature: 0 });
   const tools = [parseResumeTool, matchJobDescriptionTool];
+  const llmWithTools = llm.bindTools(tools);
   
-  const prompt = ChatPromptTemplate.fromMessages([
-    ['system', 'You are an autonomous HR evaluation agent. Extract text from the resume, parse it into structured data using the parse_resume tool, and evaluate it against the job description using the match_job_description tool. Output the final compatibility score and missing keywords.'],
-    ['human', 'Resume Text: {resumeText}\nTarget Job Description: {jobDescription}']
-  ]);
+  const messages = [
+    new SystemMessage('You are an autonomous HR evaluation agent. Read the provided resume document. First, extract its text and use the parse_resume tool to get structured data. Then, evaluate it against the job description using the match_job_description tool. Output the final compatibility score and missing keywords.'),
+    new HumanMessage({
+      content: [
+        {
+          type: 'text',
+          text: `Target Job Description: ${targetJobDescription}`
+        },
+        {
+          type: 'media',
+          mimeType: 'application/pdf',
+          data: pdfBase64
+        }
+      ]
+    })
+  ];
 
-  const agent = createToolCallingAgent({ llm, tools, prompt });
-  const agentExecutor = new AgentExecutor({ agent, tools });
+  while (true) {
+    const response = await llmWithTools.invoke(messages);
+    messages.push(response);
 
-  const result = await agentExecutor.invoke({
-    resumeText: rawResumeText,
-    jobDescription: targetJobDescription
-  });
+    if (!response.tool_calls || response.tool_calls.length === 0) {
+      console.log(response.content);
+      break;
+    }
 
-  console.log(result.output);
+    for (const toolCall of response.tool_calls) {
+      const selectedTool = tools.find(t => t.name === toolCall.name);
+      if (selectedTool) {
+        const toolResult = await selectedTool.invoke(toolCall.args);
+        messages.push(new ToolMessage({
+          content: String(toolResult),
+          tool_call_id: toolCall.id
+        }));
+      }
+    }
+  }
+
   process.exit(0);
 }
 
