@@ -1,0 +1,43 @@
+name: Full Stack CI Pipeline
+
+# This tells GitHub to run this pipeline every time you push to the 'main' branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Grab your code from the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # 2. Install Node.js on the GitHub server
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Use standard stable Node.js
+
+    # 3. Check the Backend
+    - name: Install Backend Dependencies
+      working-directory: ./server
+      run: npm install
+      
+    # (Optional) If you write backend tests later, uncomment this line:
+    # - name: Run Backend Tests
+    #   working-directory: ./server
+    #   run: npm test
+
+    # 4. Check the Frontend
+    - name: Install Frontend Dependencies
+      working-directory: ./client
+      run: npm install
+
+    # 5. Build the Frontend (This catches Vite and React syntax errors!)
+    - name: Build Frontend
+      working-directory: ./client
+      run: npm run build
