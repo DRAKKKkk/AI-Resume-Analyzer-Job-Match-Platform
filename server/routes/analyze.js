@@ -68,10 +68,20 @@ router.post('/analyze', analyzeLimiter, upload.single('resume'), async (req, res
             parsedResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { compatibilityScore: 0, missingKeywords: ["Error parsing AI output"] };
         }
 
-        await pool.query(
-            "INSERT INTO analyses (job_title, company_name, match_score, feedback) VALUES ($1, $2, $3, $4)",
+        const dbResult = await pool.query(
+            "INSERT INTO analyses (job_title, company_name, match_score, feedback) VALUES ($1, $2, $3, $4) RETURNING *",
             [jobTitle || "Untitled", companyName || "Unknown", parsedResult.compatibilityScore || 0, JSON.stringify(parsedResult.missingKeywords || [])]
         );
+
+        // --- NEW SOCKET.IO CODE STARTS HERE ---
+        // 1. Grab the 'io' instance we attached to the app in index.js
+        const io = req.app.get('io'); 
+        
+        // 2. If io exists, broadcast to all connected clients that history updated
+        if (io) {
+            io.emit('historyUpdated', dbResult.rows[0]); 
+        }
+        // --- NEW SOCKET.IO CODE ENDS HERE ---
 
         if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
         res.status(200).json(parsedResult);

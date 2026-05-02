@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
+import { Server } from 'socket.io'; // 1. IMPORT SOCKET.IO
 import pool from './db.js';
 import analyzeRouter from './routes/analyze.js';
 
@@ -9,6 +10,26 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+// 2. INITIALIZE SOCKET.IO ON THE HTTP SERVER
+const io = new Server(server, {
+  cors: {
+    origin: "*", // You can restrict this to your Vercel URL later for security
+    methods: ["GET", "POST"]
+  }
+});
+
+// 3. LISTEN FOR CONNECTIONS (Helpful for debugging)
+io.on('connection', (socket) => {
+  console.log('A client connected via socket:', socket.id);
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// 4. MAKE 'io' AVAILABLE TO YOUR ROUTES (Crucial if analyze.js emits events)
+app.set('io', io);
 
 app.use(cors());
 app.use(express.json());

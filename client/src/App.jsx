@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
-const BACKEND_URL='https://resume-ai-backend-lki4.onrender.com';
+// Toggle these depending on if you are testing locally or deploying
+const BACKEND_URL = 'http://localhost:5000'; // <-- Use this for local testing
+// const BACKEND_URL = 'https://resume-ai-backend-lki4.onrender.com'; // <-- Use this for Vercel deployment
 
 const socket = io(BACKEND_URL);
 
@@ -73,12 +75,12 @@ function App() {
     }
   };
 
-  const groupedHistory = history.reduce((acc, curr) => {
+  const groupedHistory = history?.reduce((acc, curr) => {
     const company = curr.company_name || 'Unknown';
     if (!acc[company]) acc[company] = [];
     acc[company].push(curr);
     return acc;
-  }, {});
+  }, {}) || {};
 
   const renderFeedback = (feedbackData) => {
     let parsed = feedbackData;
@@ -91,15 +93,25 @@ function App() {
       }
     }
 
+    // Fixed logic: Handles both simple strings array ["AWS", "React"] and complex objects
     if (Array.isArray(parsed)) {
-      return parsed.map((sec, i) => (
-        <div key={i} style={{ marginBottom: '12px' }}>
-          <strong style={{ display: 'block', color: '#2c3e50', fontSize: '14px', textTransform: 'uppercase' }}>{sec.section}</strong>
-          <ul style={{ margin: '4px 0 0 20px', padding: 0, color: '#555', fontSize: '14px' }}>
-            {sec.points.map((pt, j) => <li key={j} style={{ marginBottom: '4px', lineHeight: '1.4', listStyleType: 'disc' }}>{pt}</li>)}
-          </ul>
-        </div>
-      ));
+      return (
+        <ul style={{ margin: '4px 0 0 20px', padding: 0, color: '#555', fontSize: '14px' }}>
+          {parsed.map((item, i) => {
+            if (typeof item === 'string') {
+              return <li key={i} style={{ marginBottom: '4px', lineHeight: '1.4', listStyleType: 'disc' }}>{item}</li>;
+            }
+            return (
+              <div key={i} style={{ marginBottom: '12px', marginLeft: '-20px', listStyleType: 'none' }}>
+                <strong style={{ display: 'block', color: '#2c3e50', fontSize: '14px', textTransform: 'uppercase' }}>{item.section || 'Feedback'}</strong>
+                <ul style={{ margin: '4px 0 0 20px', padding: 0 }}>
+                  {item.points?.map((pt, j) => <li key={j} style={{ marginBottom: '4px', lineHeight: '1.4', listStyleType: 'disc' }}>{pt}</li>)}
+                </ul>
+              </div>
+            );
+          })}
+        </ul>
+      );
     }
 
     return <p style={{ fontSize: '14px', color: '#555', lineHeight: '1.6' }}>{String(feedbackData)}</p>;
@@ -155,7 +167,7 @@ function App() {
           type="submit" 
           disabled={loading} 
           style={{ 
-            padding: '15px', 
+            padding: '12px 30px', 
             backgroundColor: loading ? '#95a5a6' : '#3498db', 
             color: 'white', 
             border: 'none', 
@@ -163,9 +175,11 @@ function App() {
             fontSize: '16px', 
             fontWeight: 'bold', 
             cursor: loading ? 'not-allowed' : 'pointer',
-            marginTop: '10px'
+            marginTop: '10px',
+            alignSelf: 'center',
+            minWidth: '200px'
           }}>
-          {loading ? "Analyzing in background queue..." : "Analyze Match"}
+          {loading ? "Analyzing..." : "Analyze Match"}
         </button>
       </form>
 
