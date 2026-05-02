@@ -39,10 +39,13 @@ app.get('/api/history', async (req, res) => {
         const result = await pool.query("SELECT * FROM analyses ORDER BY id DESC LIMIT 20");
         res.json(result.rows);
     } catch (error) {
+        // 👇 THIS IS THE MOST IMPORTANT LINE RIGHT NOW 👇
+        console.error("\n🔥 DATABASE ERROR FETCHING HISTORY:\n", error); 
         res.status(500).json({ error: "Failed to fetch history" });
     }
 });
 
+// Added a .catch() here so we know if creating the table fails!
 pool.query(`
   CREATE TABLE IF NOT EXISTS analyses (
     id SERIAL PRIMARY KEY,
@@ -52,7 +55,7 @@ pool.query(`
     feedback TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
-`);
+`).catch(err => console.error("\n🔥 DATABASE ERROR CREATING TABLE:\n", err));
 
 app.get('/', (req, res) => {
     res.status(200).send('API is running');
