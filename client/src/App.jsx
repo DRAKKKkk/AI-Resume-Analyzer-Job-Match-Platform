@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
 // Toggle these depending on if you are testing locally or deploying
-const BACKEND_URL = 'http://localhost:5000'; // <-- Use this for local testing
+// const BACKEND_URL = 'http://localhost:5000'; // <-- Use this for local testing
 // const BACKEND_URL = 'https://resume-ai-backend-lki4.onrender.com'; // <-- Use this for Vercel deployment
 
 const socket = io(BACKEND_URL);
